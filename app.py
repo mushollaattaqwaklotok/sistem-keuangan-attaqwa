@@ -266,11 +266,11 @@ if menu == "💰 Keuangan":
             log_activity(level, f"Edit data keuangan index {idx}")
             st.success("Perubahan tersimpan.")
             st.session_state.edit_keu_idx = None
-            st.experimental_rerun()
+            st.rerun()
 
         if st.button("Batal"):
             st.session_state.edit_keu_idx = None
-            st.experimental_rerun()
+            st.rerun()
 
     # INPUT DATA (untuk panitia selain publik)
     st.subheader("Input Keuangan")
@@ -327,7 +327,7 @@ if menu == "💰 Keuangan":
                 if level == "Ketua":
                     if st.button("✏️ Edit", key=f"keu_edit_{i}"):
                         st.session_state.edit_keu_idx = i
-                        st.experimental_rerun()
+                        st.rerun()
     else:
         st.info("Belum ada data keuangan.")
 
@@ -344,7 +344,7 @@ elif menu == "📦 Barang Masuk":
         except Exception:
             st.error("Baris barang tidak tersedia.")
             st.session_state.edit_barang_idx = None
-            st.experimental_rerun()
+            st.rerun()
 
         st.subheader("✏️ Edit Data Barang (Ketua)")
         tgl_b_default = parse_date_safe(row.get("tanggal",""))
@@ -374,11 +374,11 @@ elif menu == "📦 Barang Masuk":
             log_activity(level, f"Edit data barang index {idx}")
             st.success("Perubahan barang tersimpan.")
             st.session_state.edit_barang_idx = None
-            st.experimental_rerun()
+            st.rerun()
 
         if st.button("Batal"):
             st.session_state.edit_barang_idx = None
-            st.experimental_rerun()
+            st.rerun()
 
     st.subheader("Input Barang Masuk")
     if level == "Publik":
@@ -423,7 +423,7 @@ elif menu == "📦 Barang Masuk":
                 if level == "Ketua":
                     if st.button("✏️ Edit", key=f"barang_edit_{i}"):
                         st.session_state.edit_barang_idx = i
-                        st.experimental_rerun()
+                        st.rerun()
     else:
         st.info("Belum ada data barang.")
 
