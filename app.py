@@ -232,7 +232,7 @@ if menu == "💰 Keuangan":
         except Exception:
             st.error("Baris tidak tersedia.")
             st.session_state.edit_keu_idx = None
-            st.experimental_rerun()
+            st.rerun()
 
         st.subheader("✏️ Edit Data Keuangan (Ketua)")
         tgl_default = parse_date_safe(row.get("Tanggal", ""))
