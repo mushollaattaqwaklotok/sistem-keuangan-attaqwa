@@ -25,7 +25,7 @@ if not FILE_LOG.exists():
 # =====================================================
 #  KONFIGURASI USER LOGIN
 # =====================================================
-PUBLIC_PASSWORD = "publik123"
+PUBLIC_PASSWORD = ""
 PANITIA_USERS = {
     "Ketua": "ketua123",
     "Bendahara": "bendahara123",
