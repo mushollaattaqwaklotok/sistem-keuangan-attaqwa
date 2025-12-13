@@ -449,7 +449,6 @@ if len(df_barang) > 0:
         "jumlah": "Jumlah",
         "satuan": "Satuan"
     })
-
     # Tampilkan tabel UTUH
     st.markdown(
         df_show[["Tanggal","Jenis Barang","Keterangan","Jumlah","Satuan","Bukti"]]
