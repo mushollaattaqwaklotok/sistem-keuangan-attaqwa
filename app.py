@@ -430,20 +430,50 @@ elif menu == "📦 Barang Masuk":
             log_activity(level, "Input barang baru")
             st.success("Data barang berhasil disimpan!")
 
-    # TABEL BARANG + tombol edit (Ketua)
-    st.subheader("Data Barang Masuk")
-    if len(df_barang) > 0:
-        for i in range(len(df_barang)):
-            colA, colB = st.columns([6,1])
-            with colA:
-                st.write(df_barang.iloc[[i]])
-            with colB:
-                if level == "Ketua":
-                    if st.button("✏️ Edit", key=f"barang_edit_{i}"):
-                        st.session_state.edit_barang_idx = i
-                        st.rerun()
-    else:
-        st.info("Belum ada data barang.")
+    # =====================================================
+#  TABEL BARANG MASUK (STABIL & TERDETEKSI)
+# =====================================================
+st.subheader("Data Barang Masuk")
+
+if len(df_barang) > 0:
+    df_show = df_barang.copy()
+
+    # Tambahkan kolom bukti klik
+    df_show["Bukti"] = df_show["bukti"].apply(preview_link)
+
+    # Rename agar ramah publik
+    df_show = df_show.rename(columns={
+        "tanggal": "Tanggal",
+        "jenis": "Jenis Barang",
+        "keterangan": "Keterangan",
+        "jumlah": "Jumlah",
+        "satuan": "Satuan"
+    })
+
+    # Tampilkan tabel UTUH
+    st.markdown(
+        df_show[["Tanggal","Jenis Barang","Keterangan","Jumlah","Satuan","Bukti"]]
+        .to_html(escape=False, index=True),
+        unsafe_allow_html=True
+    )
+
+    # MODE EDIT KHUSUS KETUA
+    if level == "Ketua":
+        st.markdown("### ✏️ Edit Data Barang")
+        idx = st.number_input(
+            "Pilih nomor baris",
+            min_value=0,
+            max_value=len(df_barang)-1,
+            step=1
+        )
+
+        if st.button("Edit Barang Terpilih"):
+            st.session_state.edit_barang_idx = idx
+            st.rerun()
+
+else:
+    st.info("Belum ada data barang.")
+
 
 # =====================================================
 #  MENU: LAPORAN
