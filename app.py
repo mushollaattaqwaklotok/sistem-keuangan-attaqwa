@@ -134,7 +134,13 @@ def generate_pdf(df_keu, df_barang):
         el.append(Paragraph("<b>Laporan Barang Masuk</b>", s["Heading3"]))
         data2 = [["Tanggal","Jenis","Keterangan","Jumlah","Satuan"]]
         for _,r in df_barang.iterrows():
-            data2.append([r["Tanggal"],r["Jenis"],r["Keterangan"],r["Jumlah"],r["Satuan"]])
+            data2.append([
+    r.get("Tanggal", r.get("tanggal","")),
+    r.get("Jenis", r.get("jenis","")),
+    r.get("Keterangan", r.get("keterangan","")),
+    r.get("Jumlah", r.get("jumlah","")),
+    r.get("Satuan", r.get("satuan",""))
+])
         tb = Table(data2, repeatRows=1)
         tb.setStyle(TableStyle([
             ("GRID",(0,0),(-1,-1),0.5,colors.grey),
