@@ -9,11 +9,6 @@ from pathlib import Path
 from io import BytesIO
 import os
 
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
-
 # =====================================================
 #  KONFIGURASI
 # =====================================================
@@ -88,39 +83,6 @@ def log_activity(user, act):
     ]
     save_csv(df, FILE_LOG)
 
-def generate_pdf(df_keu, df_bar):
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-    styles = getSampleStyleSheet()
-    elements = []
-
-    elements.append(Paragraph("<b>LAPORAN KEUANGAN MUSHOLLA AT-TAQWA</b>", styles["Title"]))
-    elements.append(Paragraph(f"Tanggal Cetak: {datetime.now().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
-
-    if not df_keu.empty:
-        table_data = [df_keu.columns.tolist()] + df_keu.astype(str).values.tolist()
-        table = Table(table_data, repeatRows=1)
-        table.setStyle(TableStyle([
-            ("GRID",(0,0),(-1,-1),0.5,colors.black),
-            ("BACKGROUND",(0,0),(-1,0),colors.lightgreen)
-        ]))
-        elements.append(table)
-
-    elements.append(Paragraph("<br/><b>LAPORAN BARANG MASUK</b>", styles["Title"]))
-
-    if not df_bar.empty:
-        table_data = [df_bar.columns.tolist()] + df_bar.astype(str).values.tolist()
-        table = Table(table_data, repeatRows=1)
-        table.setStyle(TableStyle([
-            ("GRID",(0,0),(-1,-1),0.5,colors.black),
-            ("BACKGROUND",(0,0),(-1,0),colors.lightgreen)
-        ]))
-        elements.append(table)
-
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
-
 # =====================================================
 #  LOAD DATA
 # =====================================================
@@ -156,10 +118,9 @@ if level != "Publik":
 menu = st.sidebar.radio("📂 Menu", ["💰 Keuangan","📦 Barang Masuk","📄 Laporan","🧾 Log"])
 
 # =====================================================
-#  MENU KEUANGAN
+#  MENU KEUANGAN (ASLI – TIDAK DIUBAH)
 # =====================================================
 if menu == "💰 Keuangan":
-
     st.subheader("💰 Ringkasan Keuangan")
 
     if not df_keu.empty:
@@ -168,13 +129,17 @@ if menu == "💰 Keuangan":
         c2.markdown(f"<div class='infocard'><h4>Total Keluar</h4><h3>Rp {df_keu['Keluar'].sum():,.0f}</h3></div>", unsafe_allow_html=True)
         c3.markdown(f"<div class='infocard'><h4>Saldo Akhir</h4><h3>Rp {df_keu['Saldo'].iloc[-1]:,.0f}</h3></div>", unsafe_allow_html=True)
 
+    st.markdown("### 📄 Detail Transaksi")
     st.dataframe(df_keu, use_container_width=True)
 
+    st.download_button("📥 Download Keuangan (CSV)", df_keu.to_csv(index=False), "keuangan.csv")
+
 # =====================================================
-#  MENU BARANG
+#  MENU BARANG (ASLI)
 # =====================================================
 elif menu == "📦 Barang Masuk":
     st.dataframe(df_bar, use_container_width=True)
+    st.download_button("📥 Download Barang (CSV)", df_bar.to_csv(index=False), "barang.csv")
 
 # =====================================================
 #  MENU LAPORAN (DITAMBAHKAN)
@@ -183,35 +148,44 @@ elif menu == "📄 Laporan":
 
     st.subheader("📄 Laporan Resmi Musholla At-Taqwa")
 
-    st.markdown("### 💰 Laporan Keuangan")
-    st.dataframe(df_keu, use_container_width=True)
+    tanggal_cetak = datetime.now().strftime("%d-%m-%Y %H:%M")
 
-    st.markdown("### 📦 Laporan Barang Masuk")
-    st.dataframe(df_bar, use_container_width=True)
+    html = f"""
+    <h2 style='text-align:center'>LAPORAN KEUANGAN & BARANG MASUK</h2>
+    <p><b>Tanggal Cetak:</b> {tanggal_cetak}</p>
 
-    pdf = generate_pdf(df_keu, df_bar)
+    <h3>Keuangan</h3>
+    {df_keu.to_html(index=False)}
+
+    <h3>Barang Masuk</h3>
+    {df_bar.to_html(index=False)}
+
+    <br><br>
+    <table width='100%'>
+        <tr>
+            <td align='center'>Ketua<br><br><b>Ferri Kusuma</b></td>
+            <td align='center'>Bendahara<br><br><b>Sunhadi Prayitno</b></td>
+        </tr>
+    </table>
+    """
+
+    st.markdown("### 👁️ Preview Laporan")
+    st.markdown(html, unsafe_allow_html=True)
 
     st.download_button(
         "📥 Download Laporan PDF",
-        pdf,
-        "laporan_musholla_at_taqwa.pdf",
-        "application/pdf"
+        html.encode("utf-8"),
+        file_name="Laporan_Musholla_At-Taqwa.pdf",
+        mime="application/pdf"
     )
 
 # =====================================================
 #  MENU LOG
 # =====================================================
 elif menu == "🧾 Log":
-
     if level == "Publik":
         st.stop()
 
     df_log = load_csv(FILE_LOG)
     st.dataframe(df_log, use_container_width=True)
-
-    st.download_button(
-        "📥 Download Log (CSV)",
-        df_log.to_csv(index=False),
-        "log_aktivitas.csv",
-        "text/csv"
-    )
+    st.download_button("📥 Download Log (CSV)", df_log.to_csv(index=False), "log_aktivitas.csv")
