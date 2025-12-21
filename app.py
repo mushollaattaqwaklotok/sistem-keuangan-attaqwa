@@ -45,7 +45,7 @@ st.set_page_config(page_title="Musholla At-Taqwa", layout="wide")
 st.markdown("""
 <style>
 .stApp { background:#f1f6f2; }
-h1,h2,h3,h4 { color:#0b6e4f; font-weight:800; }
+h1,h2,h3,h4 { color:#1b9e77; font-weight:800; }
 .header-box {
     background:linear-gradient(90deg,#064635,#0b6e4f);
     padding:22px;border-radius:14px;
