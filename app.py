@@ -1,38 +1,45 @@
-# app.py
+# =====================================================
+#  APP.PY FINAL – MUSHOLLA AT-TAQWA
+#  TAMPILAN KEMBALI SEPERTI AWAL | HIJAU NU | PDF LENGKAP
+# =====================================================
+
 import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
 from pathlib import Path
+from io import BytesIO
 
 # =====================================================
-#  KONFIGURASI AWAL
+#  KONFIGURASI DIREKTORI
 # =====================================================
 BASE_DIR = Path(".")
 DATA_DIR = BASE_DIR / "data"
-UPLOADS_DIR = BASE_DIR / "uploads"
-UPLOADS_KEU = UPLOADS_DIR / "keuangan"
-UPLOADS_BAR = UPLOADS_DIR / "barang"
 os.makedirs(DATA_DIR, exist_ok=True)
-os.makedirs(UPLOADS_DIR, exist_ok=True)
-os.makedirs(UPLOADS_KEU, exist_ok=True)
-os.makedirs(UPLOADS_BAR, exist_ok=True)
 
 FILE_KEUANGAN = DATA_DIR / "keuangan.csv"
 FILE_BARANG = DATA_DIR / "barang.csv"
 FILE_LOG = DATA_DIR / "log_aktivitas.csv"
 
-# Jika belum ada CSV, buat header minimal (kolom fixed)
+# =====================================================
+#  INISIAL FILE JIKA BELUM ADA
+# =====================================================
 if not FILE_KEUANGAN.exists():
-    pd.DataFrame(columns=["Tanggal","Keterangan","Kategori","Masuk","Keluar","Saldo","bukti_url"]).to_csv(FILE_KEUANGAN, index=False)
+    pd.DataFrame(columns=[
+        "Tanggal","Keterangan","Kategori","Masuk","Keluar","Saldo","bukti_url"
+    ]).to_csv(FILE_KEUANGAN, index=False)
+
 if not FILE_BARANG.exists():
-    pd.DataFrame(columns=["tanggal","jenis","keterangan","jumlah","satuan","bukti","bukti_penerimaan"]).to_csv(FILE_BARANG, index=False)
+    pd.DataFrame(columns=[
+        "tanggal","jenis","keterangan","jumlah","satuan","bukti"
+    ]).to_csv(FILE_BARANG, index=False)
+
 if not FILE_LOG.exists():
     pd.DataFrame(columns=["Waktu","User","Aktivitas"]).to_csv(FILE_LOG, index=False)
 
-# -----------------------------------------------------
-# Konfigurasi akun panitia (bisa diubah sesuai kebutuhan)
-# -----------------------------------------------------
+# =====================================================
+#  AKUN PANITIA
+# =====================================================
 PANITIA = {
     "ketua": "kelas3ku",
     "sekretaris": "fatik3762",
@@ -43,442 +50,215 @@ PANITIA = {
 }
 
 # =====================================================
-#  UI PREMIUM – Styling (Tema: Hijau NU)
+#  SETTING STREAMLIT & TEMA HIJAU NU
 # =====================================================
-st.set_page_config(page_title="Manajemen At-Taqwa", layout="wide")
+st.set_page_config(page_title="Manajemen Musholla At-Taqwa", layout="wide")
 
 st.markdown("""
 <style>
-.stApp { background-color: #f1f6f2 !important; }
-h1,h2,h3,h4 { color:#0b6e4f !important; font-weight:800; }
+.stApp { background-color:#f1f6f2; }
+h1,h2,h3,h4 { color:#0b6e4f; font-weight:800; }
 .header-box {
-    background: linear-gradient(90deg,#0b6e4f,#18a36d);
-    padding:22px 26px; border-radius:14px;
-    color:white !important; margin-bottom:16px;
+    background:linear-gradient(90deg,#0b6e4f,#18a36d);
+    padding:22px;
+    border-radius:14px;
+    color:white;
+    margin-bottom:18px;
 }
-.header-title { font-size:30px; font-weight:900; }
-.header-sub { opacity:.85; margin-top:-6px; }
-section[data-testid="stSidebar"] { background:#0b6e4f; padding:20px; }
+section[data-testid="stSidebar"] { background:#0b6e4f; }
 section[data-testid="stSidebar"] * { color:white !important; }
 .stButton>button {
-    background: linear-gradient(90deg,#0b6e4f,#18a36d);
-    color:white !important; font-weight:700;
-    padding:8px 22px; border-radius:10px;
+    background:linear-gradient(90deg,#0b6e4f,#18a36d);
+    color:white;
+    font-weight:700;
+    border-radius:10px;
 }
-.stButton>button:hover { background: linear-gradient(90deg,#18a36d,#0b6e4f); transform:scale(1.03); }
-input, textarea, select { border-radius:10px !important; border:1px solid #0b6e4f !important; }
-.infocard { background:white; border-radius:14px; padding:18px; text-align:center; border:1px solid #d9e9dd; margin-bottom:15px; }
-.infocard h3 { margin:4px 0; font-size:20px; color:#0b6e4f; }
-.infocard p { margin:0; font-weight:700; font-size:18px; color:#0b6e4f; }
-.dataframe th { background:#0b6e4f !important; color:white !important; padding:8px !important; }
-.dataframe td { padding:6px !important; border:1px solid #c8e6d3 !important; }
-a { color: #0b6e4f; }
+.infocard {
+    background:white;
+    border-radius:14px;
+    padding:18px;
+    border:1px solid #d9e9dd;
+    text-align:center;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # =====================================================
-#  UTIL FUNCTIONS
+#  UTIL
 # =====================================================
-def read_csv_safe(path, dtype_cols=None):
+def read_csv_safe(path):
     try:
-        if path.exists():
-            df = pd.read_csv(path)
-        else:
-            df = pd.DataFrame()
-    except Exception:
-        df = pd.DataFrame()
-    if dtype_cols:
-        for col, dtype in dtype_cols.items():
-            if col not in df.columns:
-                df[col] = pd.Series(dtype=dtype)
-    return df
-
-def save_csv(df, path):
-    df.to_csv(path, index=False)
-
-def sanitize_amount(x):
-    """Aman konversi ke int untuk field numeric; kembalikan 0 jika gagal."""
-    try:
-        if pd.isna(x) or x == "":
-            return 0
-        return int(float(x))
-    except Exception:
-        return 0
-
-def parse_date_safe(s):
-    """Kembalikan string tanggal 'YYYY-MM-DD' jika bisa, atau today jika gagal."""
-    try:
-        d = pd.to_datetime(s, errors='coerce')
-        if pd.isna(d):
-            return datetime.now().strftime("%Y-%m-%d")
-        return d.strftime("%Y-%m-%d")
-    except Exception:
-        return datetime.now().strftime("%Y-%m-%d")
-
-def preview_link(url):
-    if pd.isna(url) or url == "" or url is None:
-        return "-"
-    return f"<a href='{url}' target='_blank'>Lihat Bukti</a>"
-
-def log_activity(user, activity):
-    t = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    df_log = read_csv_safe(FILE_LOG)
-    new = pd.DataFrame([[t, user, activity]], columns=["Waktu","User","Aktivitas"])
-    df_log = pd.concat([df_log, new], ignore_index=True)
-    save_csv(df_log, FILE_LOG)
-
-def save_uploaded_file(uploaded, dest_folder: Path):
-    """Simpan file uploader Streamlit ke dest_folder dan kembalikan path string relatif."""
-    if uploaded is None:
-        return ""
-    safe_name = uploaded.name
-    dest = dest_folder / safe_name
-    if dest.exists():
-        stem = dest.stem
-        suffix = dest.suffix
-        ts = datetime.now().strftime("%Y%m%d%H%M%S")
-        dest = dest_folder / f"{stem}_{ts}{suffix}"
-    with open(dest, "wb") as f:
-        f.write(uploaded.getbuffer())
-    return str(dest)
+        return pd.read_csv(path)
+    except:
+        return pd.DataFrame()
 
 # =====================================================
-#  LOAD DATA (kolom fixed)
+#  LOAD & NORMALISASI DATA
 # =====================================================
-df_keu = read_csv_safe(FILE_KEUANGAN, dtype_cols={
-    "Tanggal": str, "Keterangan": str, "Kategori": str,
-    "Masuk": float, "Keluar": float, "Saldo": float, "bukti_url": str
-})
-for col in ["Masuk", "Keluar", "Saldo"]:
-    if col not in df_keu.columns:
-        df_keu[col] = 0
-df_keu["Masuk"] = pd.to_numeric(df_keu["Masuk"], errors="coerce").fillna(0).astype(float)
-df_keu["Keluar"] = pd.to_numeric(df_keu["Keluar"], errors="coerce").fillna(0).astype(float)
-if len(df_keu) > 0:
-    df_keu["Saldo"] = df_keu["Masuk"].cumsum() - df_keu["Keluar"].cumsum()
+df_keu = read_csv_safe(FILE_KEUANGAN)
+df_barang = read_csv_safe(FILE_BARANG)
 
-df_barang = read_csv_safe(FILE_BARANG, dtype_cols={
-    "tanggal": str, "jenis": str, "keterangan": str, "jumlah": float, "satuan": str, "bukti": str, "bukti_penerimaan": str
-})
-for col in ["jumlah"]:
-    if col not in df_barang.columns:
-        df_barang[col] = 0
-df_barang["jumlah"] = pd.to_numeric(df_barang["jumlah"], errors="coerce").fillna(0).astype(float)
+if not df_keu.empty:
+    df_keu["Kategori"] = df_keu["Kategori"].astype(str).str.strip().str.lower()
+    df_keu.loc[df_keu["Kategori"].isin(["kas masuk","kas_masuk"]), "Kategori"] = "Kas_Masuk"
+    df_keu.loc[df_keu["Kategori"].isin(["kas keluar","kas_keluar"]), "Kategori"] = "Kas_Keluar"
 
-df_log = read_csv_safe(FILE_LOG)
+    df_keu["Masuk"] = pd.to_numeric(df_keu["Masuk"], errors="coerce").fillna(0)
+    df_keu["Keluar"] = pd.to_numeric(df_keu["Keluar"], errors="coerce").fillna(0)
+    df_keu["Saldo"] = (df_keu["Masuk"] - df_keu["Keluar"]).cumsum()
+
+# =====================================================
+#  FUNGSI PDF (KEUANGAN + BARANG)
+# =====================================================
+def generate_pdf(df_keu, df_barang):
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    styles = getSampleStyleSheet()
+    el = []
+
+    el.append(Paragraph("<b>MUSHOLLA AT-TAQWA</b>", styles["Title"]))
+    el.append(Paragraph("LAPORAN KEUANGAN & BARANG MASUK", styles["Heading2"]))
+    el.append(Paragraph(f"Tanggal Cetak: {datetime.now().strftime('%d %B %Y')}", styles["Normal"]))
+    el.append(Spacer(1,12))
+
+    # --- TABEL KEUANGAN ---
+    el.append(Paragraph("<b>Laporan Keuangan</b>", styles["Heading3"]))
+    data_keu = [["Tanggal","Keterangan","Masuk","Keluar","Saldo"]]
+    for _, r in df_keu.iterrows():
+        data_keu.append([
+            r["Tanggal"], r["Keterangan"],
+            f"{r['Masuk']:,.0f}",
+            f"{r['Keluar']:,.0f}",
+            f"{r['Saldo']:,.0f}"
+        ])
+
+    tbl_keu = Table(data_keu, repeatRows=1)
+    tbl_keu.setStyle(TableStyle([
+        ("GRID",(0,0),(-1,-1),0.5,colors.grey),
+        ("BACKGROUND",(0,0),(-1,0),colors.lightgrey),
+        ("ALIGN",(2,1),(-1,-1),"RIGHT")
+    ]))
+    el.append(tbl_keu)
+    el.append(Spacer(1,16))
+
+    # --- TABEL BARANG ---
+    if not df_barang.empty:
+        el.append(Paragraph("<b>Laporan Barang Masuk</b>", styles["Heading3"]))
+        data_bar = [["Tanggal","Jenis","Keterangan","Jumlah","Satuan"]]
+        for _, r in df_barang.iterrows():
+            data_bar.append([
+                r.get("tanggal",""),
+                r.get("jenis",""),
+                r.get("keterangan",""),
+                r.get("jumlah",""),
+                r.get("satuan","")
+            ])
+
+        tbl_bar = Table(data_bar, repeatRows=1)
+        tbl_bar.setStyle(TableStyle([
+            ("GRID",(0,0),(-1,-1),0.5,colors.grey),
+            ("BACKGROUND",(0,0),(-1,0),colors.lightgrey)
+        ]))
+        el.append(tbl_bar)
+
+    el.append(Spacer(1,20))
+    el.append(Paragraph(
+        "Ketua: Ferri Kusuma<br/>"
+        "Sekretaris: Alfan Fatichul Ichsan<br/>"
+        "Bendahara: Sunhadi Prayitno",
+        styles["Normal"]
+    ))
+
+    doc.build(el)
+    buffer.seek(0)
+    return buffer
 
 # =====================================================
 #  HEADER
 # =====================================================
 st.markdown("""
 <div class="header-box">
-    <div class="header-title">Laporan Keuangan Musholla At-Taqwa</div>
-    <div class="header-sub">Transparansi • Amanah • Profesional</div>
+<h2>📊 Laporan Keuangan Musholla At-Taqwa</h2>
+Transparansi • Amanah • Profesional
 </div>
 """, unsafe_allow_html=True)
 
 # =====================================================
-#  LOGIN SIDEBAR
+#  LOGIN
 # =====================================================
-st.sidebar.header("Login sebagai:")
-level = st.sidebar.radio("", [
-    "Publik",
-    "Ketua",
-    "Sekretaris",
-    "Bendahara 1",
-    "Bendahara 2",
-    "Koor Donasi 1",
-    "Koor Donasi 2"
-])
+st.sidebar.header("🔐 Login")
+level = st.sidebar.radio("", ["Publik","Ketua","Sekretaris","Bendahara 1","Bendahara 2","Koor Donasi 1","Koor Donasi 2"])
 
 if level != "Publik":
-    password = st.sidebar.text_input("Password:", type="password", key="pw_input")
-    key = level.lower()
-    if key not in PANITIA or password != PANITIA[key]:
-        st.warning("🔒 Masukkan password yang benar.")
+    pw = st.sidebar.text_input("Password", type="password")
+    if PANITIA.get(level.lower()) != pw:
+        st.warning("❌ Password salah")
         st.stop()
 
-menu = st.sidebar.radio("Menu:", ["💰 Keuangan", "📦 Barang Masuk", "📄 Laporan", "🧾 Log"], key="main_menu")
+menu = st.sidebar.radio("📂 Menu", ["💰 Keuangan","📦 Barang Masuk","📄 Laporan","🧾 Log"])
 
 # =====================================================
-#  SESSION STATE FOR EDITS
-# =====================================================
-if "edit_keu_idx" not in st.session_state:
-    st.session_state.edit_keu_idx = None
-if "edit_barang_idx" not in st.session_state:
-    st.session_state.edit_barang_idx = None
-
-# =====================================================
-#  MENU: KEUANGAN
+#  MENU KEUANGAN (RINGKASAN DI ATAS – SEPERTI AWAL)
 # =====================================================
 if menu == "💰 Keuangan":
-    st.header("💰 Keuangan")
+    st.subheader("💰 Ringkasan Keuangan")
 
-    # DASHBOARD CARDS
-    if len(df_keu) > 0:
+    if not df_keu.empty:
         col1, col2, col3 = st.columns(3)
-        with col1:
-            st.markdown(f"<div class='infocard'><h3>Total Masuk</h3><p>Rp {int(df_keu['Masuk'].sum()):,}</p></div>", unsafe_allow_html=True)
-        with col2:
-            st.markdown(f"<div class='infocard'><h3>Total Keluar</h3><p>Rp {int(df_keu['Keluar'].sum()):,}</p></div>", unsafe_allow_html=True)
-        with col3:
-            st.markdown(f"<div class='infocard'><h3>Saldo Akhir</h3><p>Rp {int(df_keu['Saldo'].iloc[-1]) if len(df_keu)>0 else 0:,}</p></div>", unsafe_allow_html=True)
+        col1.markdown(f"<div class='infocard'><h4>Total Masuk</h4><h3>Rp {df_keu['Masuk'].sum():,.0f}</h3></div>", unsafe_allow_html=True)
+        col2.markdown(f"<div class='infocard'><h4>Total Keluar</h4><h3>Rp {df_keu['Keluar'].sum():,.0f}</h3></div>", unsafe_allow_html=True)
+        col3.markdown(f"<div class='infocard'><h4>Saldo Akhir</h4><h3>Rp {df_keu['Saldo'].iloc[-1]:,.0f}</h3></div>", unsafe_allow_html=True)
 
-    # EDIT MODE (Hanya Ketua boleh edit)
-    if level == "Ketua" and st.session_state.edit_keu_idx is not None:
-        idx = st.session_state.edit_keu_idx
-        try:
-            row = df_keu.iloc[idx]
-        except Exception:
-            st.error("Baris tidak tersedia.")
-            st.session_state.edit_keu_idx = None
-            st.rerun()
-
-        st.subheader("✏️ Edit Data Keuangan (Ketua)")
-        tgl_default = parse_date_safe(row.get("Tanggal", ""))
-        # beri key unik untuk setiap widget di mode edit
-        tgl_e = st.date_input("Tanggal", value=pd.to_datetime(tgl_default).date(), key=f"tgl_keu_{idx}")
-        ket_e = st.text_input("Keterangan", value=row.get("Keterangan", ""), key=f"ket_keu_{idx}")
-        kategori_e = st.selectbox("Kategori", ["Kas Masuk", "Kas Keluar"],
-                                  index=0 if str(row.get("Kategori",""))=="Kas Masuk" else 1,
-                                  key=f"kategori_keu_{idx}")
-        masuk_val = sanitize_amount(row.get("Masuk", 0))
-        keluar_val = sanitize_amount(row.get("Keluar", 0))
-        masuk_e = st.number_input("Masuk (Rp)", min_value=0, value=masuk_val, key=f"masuk_keu_{idx}")
-        keluar_e = st.number_input("Keluar (Rp)", min_value=0, value=keluar_val, key=f"keluar_keu_{idx}")
-        bukti_e = st.file_uploader("Ganti Bukti (opsional)", type=["pdf","png","jpg","jpeg"], key=f"bukti_keu_{idx}")
-
-        if st.button("💾 Simpan Perubahan", key=f"save_keu_{idx}"):
-            bukti_path = row.get("bukti_url", "")
-            if bukti_e:
-                bukti_path = save_uploaded_file(bukti_e, UPLOADS_KEU)
-                log_activity(level, f"Upload bukti keuangan: {bukti_path}")
-
-            df_keu.at[idx, "Tanggal"] = str(pd.to_datetime(tgl_e).date())
-            df_keu.at[idx, "Keterangan"] = ket_e
-            df_keu.at[idx, "Kategori"] = kategori_e
-            df_keu.at[idx, "Masuk"] = float(masuk_e)
-            df_keu.at[idx, "Keluar"] = float(keluar_e)
-            df_keu.at[idx, "bukti_url"] = bukti_path
-
-            df_keu["Masuk"] = pd.to_numeric(df_keu["Masuk"], errors="coerce").fillna(0)
-            df_keu["Keluar"] = pd.to_numeric(df_keu["Keluar"], errors="coerce").fillna(0)
-            df_keu["Saldo"] = df_keu["Masuk"].cumsum() - df_keu["Keluar"].cumsum()
-
-            save_csv(df_keu, FILE_KEUANGAN)
-            log_activity(level, f"Edit data keuangan index {idx}")
-            st.success("Perubahan tersimpan.")
-            st.session_state.edit_keu_idx = None
-            st.rerun()
-
-        if st.button("Batal", key=f"batal_keu_{idx}"):
-            st.session_state.edit_keu_idx = None
-            st.rerun()
-
-    # INPUT DATA (untuk panitia selain publik)
-    st.subheader("Input Keuangan")
-    if level == "Publik":
-        st.info("🔒 Hanya panitia yang dapat input data.")
-        if len(df_keu) > 0:
-            st.download_button("⬇️ Download Laporan Keuangan (CSV)", df_keu.to_csv(index=False).encode("utf-8"), "laporan_keuangan.csv", mime="text/csv")
-    else:
-        tgl = st.date_input("Tanggal", key="tgl_input_keu")
-        ket = st.text_input("Keterangan", key="ket_input_keu")
-        kategori = st.selectbox("Kategori", ["Kas Masuk", "Kas Keluar"], key="kategori_input_keu")
-        masuk = st.number_input("Masuk (Rp)", min_value=0, key="masuk_input_keu")
-        keluar = st.number_input("Keluar (Rp)", min_value=0, key="keluar_input_keu")
-        bukti = st.file_uploader("Upload Bukti (pdf/jpg/png)", type=["pdf","png","jpg","jpeg"], key="bukti_input_keu")
-
-        if st.button("Simpan Data", key="simpan_input_keu"):
-            bukti_path = ""
-            if bukti:
-                bukti_path = save_uploaded_file(bukti, UPLOADS_KEU)
-                log_activity(level, f"Upload bukti keuangan: {bukti_path}")
-
-            last_saldo = float(df_keu["Saldo"].iloc[-1]) if len(df_keu) else 0.0
-            saldo_akhir = last_saldo + float(masuk) - float(keluar)
-
-            new_row = {
-                "Tanggal": str(pd.to_datetime(tgl).date()),
-                "Keterangan": ket,
-                "Kategori": kategori,
-                "Masuk": float(masuk),
-                "Keluar": float(keluar),
-                "Saldo": float(saldo_akhir),
-                "bukti_url": bukti_path
-            }
-            df_keu = pd.concat([df_keu, pd.DataFrame([new_row])], ignore_index=True)
-            df_keu["Masuk"] = pd.to_numeric(df_keu["Masuk"], errors="coerce").fillna(0)
-            df_keu["Keluar"] = pd.to_numeric(df_keu["Keluar"], errors="coerce").fillna(0)
-            df_keu["Saldo"] = df_keu["Masuk"].cumsum() - df_keu["Keluar"].cumsum()
-
-            save_csv(df_keu, FILE_KEUANGAN)
-            log_activity(level, "Input data keuangan baru")
-            st.success("Data berhasil disimpan!")
-
-    # TABEL KEUANGAN + tombol edit utk Ketua
-    st.subheader("Tabel Laporan Keuangan")
-    if len(df_keu) > 0:
-        df_show = df_keu.copy()
-        df_show["Bukti"] = df_show["bukti_url"].apply(preview_link)
-        for i in range(len(df_show)):
-            row_html = df_show.iloc[[i]].to_html(escape=False)
-            colA, colB = st.columns([6,1])
-            with colA:
-                st.markdown(row_html, unsafe_allow_html=True)
-            with colB:
-                if level == "Ketua":
-                    if st.button("✏️ Edit", key=f"keu_edit_{i}"):
-                        st.session_state.edit_keu_idx = i
-                        st.rerun()
+        st.markdown("### 📄 Detail Transaksi")
+        st.dataframe(df_keu, use_container_width=True)
     else:
         st.info("Belum ada data keuangan.")
 
 # =====================================================
-#  MENU: BARANG MASUK
+#  MENU BARANG
 # =====================================================
 elif menu == "📦 Barang Masuk":
-    st.header("📦 Barang Masuk")
-
-    # MODE EDIT BARANG (Ketua)
-    if level == "Ketua" and st.session_state.edit_barang_idx is not None:
-        idx = st.session_state.edit_barang_idx
-        try:
-            row = df_barang.iloc[idx]
-        except Exception:
-            st.error("Baris barang tidak tersedia.")
-            st.session_state.edit_barang_idx = None
-            st.rerun()
-
-        st.subheader("✏️ Edit Data Barang (Ketua)")
-        tgl_b_default = parse_date_safe(row.get("tanggal",""))
-        tgl_b = st.date_input("Tanggal Barang", value=pd.to_datetime(tgl_b_default).date(), key=f"tgl_bar_{idx}")
-        jenis_b = st.text_input("Jenis Barang", value=row.get("jenis",""), key=f"jenis_bar_{idx}")
-        ket_b = st.text_input("Keterangan", value=row.get("keterangan",""), key=f"ket_bar_{idx}")
-        jumlah_val = sanitize_amount(row.get("jumlah",0))
-        jml_b = st.number_input("Jumlah", min_value=0, value=jumlah_val, key=f"jml_bar_{idx}")
-        satuan_b = st.text_input("Satuan", value=row.get("satuan",""), key=f"satuan_bar_{idx}")
-        bukti_b = st.file_uploader("Ganti Bukti Penerimaan (opsional)", type=["pdf","png","jpg","jpeg"], key=f"bukti_bar_{idx}")
-
-        col_save, col_del = st.columns([1,1])
-        with col_save:
-            if st.button("💾 Simpan Perubahan Barang", key=f"save_bar_{idx}"):
-                bukti_path = row.get("bukti", "")
-                if bukti_b:
-                    bukti_path = save_uploaded_file(bukti_b, UPLOADS_BAR)
-                    log_activity(level, f"Upload bukti barang: {bukti_path}")
-
-                df_barang.at[idx, "tanggal"] = str(pd.to_datetime(tgl_b).date())
-                df_barang.at[idx, "jenis"] = jenis_b
-                df_barang.at[idx, "keterangan"] = ket_b
-                df_barang.at[idx, "jumlah"] = float(jml_b)
-                df_barang.at[idx, "satuan"] = satuan_b
-                df_barang.at[idx, "bukti"] = bukti_path
-                df_barang.at[idx, "bukti_penerimaan"] = bukti_path
-
-                save_csv(df_barang, FILE_BARANG)
-                log_activity(level, f"Edit data barang index {idx}")
-                st.success("Perubahan barang tersimpan.")
-                st.session_state.edit_barang_idx = None
-                st.rerun()
-
-        with col_del:
-            if st.button("🗑️ Hapus Barang (Ketua)", key=f"del_bar_{idx}"):
-                # hapus baris
-                df_barang = df_barang.drop(df_barang.index[idx]).reset_index(drop=True)
-                save_csv(df_barang, FILE_BARANG)
-                log_activity(level, f"Hapus data barang index {idx}")
-                st.success("Data barang dihapus.")
-                st.session_state.edit_barang_idx = None
-                st.rerun()
-
-        if st.button("Batal", key=f"batal_bar_{idx}"):
-            st.session_state.edit_barang_idx = None
-            st.rerun()
-
-    # INPUT BARANG
-    st.subheader("Input Barang Masuk")
-    if level == "Publik":
-        st.info("🔒 Hanya panitia yang dapat input data.")
-        if len(df_barang) > 0:
-            st.download_button("⬇️ Download Data Barang (CSV)", df_barang.to_csv(index=False).encode("utf-8"), "barang_masuk.csv", mime="text/csv")
-    else:
-        tgl_b = st.date_input("Tanggal Barang", key="tgl_input_bar")
-        jenis_b = st.text_input("Jenis Barang", key="jenis_input_bar")
-        ket_b = st.text_input("Keterangan", key="ket_input_bar")
-        jml_b = st.number_input("Jumlah", min_value=0, key="jml_input_bar")
-        satuan_b = st.text_input("Satuan", key="satuan_input_bar")
-        bukti_b = st.file_uploader("Upload Bukti Penerimaan (pdf/jpg/png)", type=["pdf","png","jpg","jpeg"], key="bukti_input_bar")
-
-        if st.button("Simpan Barang", key="simpan_input_bar"):
-            bukti_path = ""
-            if bukti_b:
-                bukti_path = save_uploaded_file(bukti_b, UPLOADS_BAR)
-                log_activity(level, f"Upload bukti barang: {bukti_path}")
-
-            new_b = {
-                "tanggal": str(pd.to_datetime(tgl_b).date()),
-                "jenis": jenis_b,
-                "keterangan": ket_b,
-                "jumlah": float(jml_b),
-                "satuan": satuan_b,
-                "bukti": bukti_path,
-                "bukti_penerimaan": bukti_path
-            }
-            df_barang = pd.concat([df_barang, pd.DataFrame([new_b])], ignore_index=True)
-            save_csv(df_barang, FILE_BARANG)
-            log_activity(level, "Input barang baru")
-            st.success("Data barang berhasil disimpan!")
-
-    # TABEL BARANG + tombol edit (Ketua)
-    st.subheader("Data Barang Masuk")
-    if len(df_barang) > 0:
-        for i in range(len(df_barang)):
-            colA, colB = st.columns([6,1])
-            with colA:
-                st.write(df_barang.iloc[[i]])
-            with colB:
-                if level == "Ketua":
-                    if st.button("✏️ Edit", key=f"barang_edit_{i}"):
-                        st.session_state.edit_barang_idx = i
-                        st.rerun()
-    else:
+    st.subheader("📦 Barang Masuk")
+    if df_barang.empty:
         st.info("Belum ada data barang.")
+    else:
+        st.dataframe(df_barang, use_container_width=True)
 
 # =====================================================
-#  MENU: LAPORAN
+#  MENU LAPORAN (KEU + BARANG + PDF)
 # =====================================================
 elif menu == "📄 Laporan":
-    st.header("📄 Laporan Keuangan")
-    if len(df_keu) > 0:
-        df_show = df_keu.copy()
-        df_show["Bukti"] = df_show["bukti_url"].apply(preview_link)
-        st.markdown(df_show.to_html(escape=False), unsafe_allow_html=True)
+    st.subheader("📄 Laporan Resmi")
+
+    st.markdown("### 💰 Laporan Keuangan")
+    st.dataframe(df_keu, use_container_width=True)
+
+    st.markdown("### 📦 Laporan Barang Masuk")
+    if df_barang.empty:
+        st.info("Belum ada data barang.")
     else:
-        st.info("Belum ada data.")
+        st.dataframe(df_barang, use_container_width=True)
+
+    pdf = generate_pdf(df_keu, df_barang)
+    st.download_button(
+        "📥 Download Laporan PDF Resmi",
+        data=pdf,
+        file_name="Laporan_Musholla_At-Taqwa.pdf",
+        mime="application/pdf"
+    )
 
 # =====================================================
-#  MENU: LOG
+#  MENU LOG
 # =====================================================
 elif menu == "🧾 Log":
-    st.header("🧾 Log Aktivitas")
     df_log = read_csv_safe(FILE_LOG)
-    if len(df_log) > 0:
-        # Tampilkan tabel log; tambahkan tombol hapus per baris (hanya ketua)
-        for i in range(len(df_log)):
-            row = df_log.iloc[i]
-            colA, colB = st.columns([9,1])
-            with colA:
-                st.write(f"{row['Waktu']} — {row['User']} — {row['Aktivitas']}")
-            with colB:
-                if level == "Ketua":
-                    if st.button("🗑️", key=f"del_log_{i}"):
-                        df_log = df_log.drop(df_log.index[i]).reset_index(drop=True)
-                        save_csv(df_log, FILE_LOG)
-                        log_activity(level, f"Hapus log index {i}")
-                        st.success("Entri log dihapus.")
-                        st.rerun()
-        # tombol download log
-        st.download_button("⬇️ Download Log (CSV)", df_log.to_csv(index=False).encode("utf-8"), "log_aktivitas.csv", mime="text/csv")
-    else:
+    st.subheader("🧾 Log Aktivitas")
+    if df_log.empty:
         st.info("Belum ada log.")
+    else:
+        st.dataframe(df_log, use_container_width=True)
