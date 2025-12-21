@@ -9,6 +9,11 @@ from pathlib import Path
 from io import BytesIO
 import os
 
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+
 # =====================================================
 #  KONFIGURASI
 # =====================================================
@@ -83,6 +88,39 @@ def log_activity(user, act):
     ]
     save_csv(df, FILE_LOG)
 
+def generate_pdf(df_keu, df_bar):
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph("<b>LAPORAN KEUANGAN MUSHOLLA AT-TAQWA</b>", styles["Title"]))
+    elements.append(Paragraph(f"Tanggal Cetak: {datetime.now().strftime('%d-%m-%Y %H:%M')}", styles["Normal"]))
+
+    if not df_keu.empty:
+        table_data = [df_keu.columns.tolist()] + df_keu.astype(str).values.tolist()
+        table = Table(table_data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ("GRID",(0,0),(-1,-1),0.5,colors.black),
+            ("BACKGROUND",(0,0),(-1,0),colors.lightgreen)
+        ]))
+        elements.append(table)
+
+    elements.append(Paragraph("<br/><b>LAPORAN BARANG MASUK</b>", styles["Title"]))
+
+    if not df_bar.empty:
+        table_data = [df_bar.columns.tolist()] + df_bar.astype(str).values.tolist()
+        table = Table(table_data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ("GRID",(0,0),(-1,-1),0.5,colors.black),
+            ("BACKGROUND",(0,0),(-1,0),colors.lightgreen)
+        ]))
+        elements.append(table)
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
 # =====================================================
 #  LOAD DATA
 # =====================================================
@@ -130,71 +168,35 @@ if menu == "💰 Keuangan":
         c2.markdown(f"<div class='infocard'><h4>Total Keluar</h4><h3>Rp {df_keu['Keluar'].sum():,.0f}</h3></div>", unsafe_allow_html=True)
         c3.markdown(f"<div class='infocard'><h4>Saldo Akhir</h4><h3>Rp {df_keu['Saldo'].iloc[-1]:,.0f}</h3></div>", unsafe_allow_html=True)
 
-    st.markdown("### 📄 Detail Transaksi")
     st.dataframe(df_keu, use_container_width=True)
 
-    # ---------- DOWNLOAD ----------
-    st.download_button(
-        "📥 Download Keuangan (CSV)",
-        df_keu.to_csv(index=False),
-        "keuangan.csv",
-        "text/csv"
-    )
-
-    # ---------- INPUT / EDIT / HAPUS ----------
-    if level != "Publik":
-
-        st.markdown("### ➕ Tambah Data Keuangan")
-        with st.form("add_keu"):
-            tgl = st.date_input("Tanggal")
-            ket = st.text_input("Keterangan")
-            masuk = st.number_input("Masuk", min_value=0)
-            keluar = st.number_input("Keluar", min_value=0)
-            submit = st.form_submit_button("Simpan")
-
-            if submit:
-                df_keu.loc[len(df_keu)] = [tgl, ket, "", masuk, keluar, 0]
-                save_csv(df_keu, FILE_KEU)
-                log_activity(level, "Tambah data keuangan")
-                st.success("Data tersimpan")
-                st.rerun()
-
-        st.markdown("### ✏️ Edit / 🗑️ Hapus Data")
-        idx = st.number_input("Index data", min_value=0, max_value=len(df_keu)-1 if len(df_keu)>0 else 0)
-        if st.button("🗑️ Hapus"):
-            df_keu = df_keu.drop(idx).reset_index(drop=True)
-            save_csv(df_keu, FILE_KEU)
-            log_activity(level, f"Hapus data keuangan index {idx}")
-            st.success("Data dihapus")
-            st.rerun()
-
 # =====================================================
-#  MENU BARANG (STRUKTUR SAMA)
+#  MENU BARANG
 # =====================================================
 elif menu == "📦 Barang Masuk":
-
     st.dataframe(df_bar, use_container_width=True)
 
-    st.download_button(
-        "📥 Download Barang (CSV)",
-        df_bar.to_csv(index=False),
-        "barang.csv",
-        "text/csv"
-    )
+# =====================================================
+#  MENU LAPORAN (DITAMBAHKAN)
+# =====================================================
+elif menu == "📄 Laporan":
 
-    if level != "Publik":
-        with st.form("add_bar"):
-            tgl = st.date_input("Tanggal")
-            jenis = st.text_input("Jenis")
-            ket = st.text_input("Keterangan")
-            jml = st.number_input("Jumlah", min_value=0)
-            sat = st.text_input("Satuan")
-            if st.form_submit_button("Simpan"):
-                df_bar.loc[len(df_bar)] = [tgl, jenis, ket, jml, sat]
-                save_csv(df_bar, FILE_BAR)
-                log_activity(level, "Tambah data barang")
-                st.success("Data tersimpan")
-                st.rerun()
+    st.subheader("📄 Laporan Resmi Musholla At-Taqwa")
+
+    st.markdown("### 💰 Laporan Keuangan")
+    st.dataframe(df_keu, use_container_width=True)
+
+    st.markdown("### 📦 Laporan Barang Masuk")
+    st.dataframe(df_bar, use_container_width=True)
+
+    pdf = generate_pdf(df_keu, df_bar)
+
+    st.download_button(
+        "📥 Download Laporan PDF",
+        pdf,
+        "laporan_musholla_at_taqwa.pdf",
+        "application/pdf"
+    )
 
 # =====================================================
 #  MENU LOG
