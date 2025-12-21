@@ -6,7 +6,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
-from io import BytesIO
 import os
 
 # =====================================================
@@ -68,18 +67,14 @@ section[data-testid="stSidebar"] * { color:white !important; }
 # =====================================================
 #  UTIL
 # =====================================================
-def load_csv(path):
-    return pd.read_csv(path)
-
-def save_csv(df, path):
-    df.to_csv(path, index=False)
+def load_csv(path): return pd.read_csv(path)
+def save_csv(df, path): df.to_csv(path, index=False)
 
 def log_activity(user, act):
     df = load_csv(FILE_LOG)
     df.loc[len(df)] = [
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        user,
-        act
+        user, act
     ]
     save_csv(df, FILE_LOG)
 
@@ -123,93 +118,89 @@ menu = st.sidebar.radio("📂 Menu", ["💰 Keuangan","📦 Barang Masuk","📄 
 if menu == "💰 Keuangan":
 
     st.subheader("💰 Ringkasan Keuangan")
-
     if not df_keu.empty:
         c1,c2,c3 = st.columns(3)
         c1.markdown(f"<div class='infocard'><h4>Total Masuk</h4><h3>Rp {df_keu['Masuk'].sum():,.0f}</h3></div>", unsafe_allow_html=True)
         c2.markdown(f"<div class='infocard'><h4>Total Keluar</h4><h3>Rp {df_keu['Keluar'].sum():,.0f}</h3></div>", unsafe_allow_html=True)
         c3.markdown(f"<div class='infocard'><h4>Saldo Akhir</h4><h3>Rp {df_keu['Saldo'].iloc[-1]:,.0f}</h3></div>", unsafe_allow_html=True)
 
-    st.markdown("### 📄 Detail Transaksi")
     st.dataframe(df_keu, use_container_width=True)
+    st.download_button("📥 Download Keuangan (CSV)", df_keu.to_csv(index=False), "keuangan.csv")
 
-    # ---------- DOWNLOAD ----------
-    st.download_button(
-        "📥 Download Keuangan (CSV)",
-        df_keu.to_csv(index=False),
-        "keuangan.csv",
-        "text/csv"
-    )
-
-    # ---------- INPUT / EDIT / HAPUS ----------
     if level != "Publik":
-
-        st.markdown("### ➕ Tambah Data Keuangan")
+        st.markdown("### ➕ Tambah Data")
         with st.form("add_keu"):
             tgl = st.date_input("Tanggal")
             ket = st.text_input("Keterangan")
-            masuk = st.number_input("Masuk", min_value=0)
-            keluar = st.number_input("Keluar", min_value=0)
-            submit = st.form_submit_button("Simpan")
-
-            if submit:
+            masuk = st.number_input("Masuk", 0)
+            keluar = st.number_input("Keluar", 0)
+            if st.form_submit_button("Simpan"):
                 df_keu.loc[len(df_keu)] = [tgl, ket, "", masuk, keluar, 0]
                 save_csv(df_keu, FILE_KEU)
                 log_activity(level, "Tambah data keuangan")
-                st.success("Data tersimpan")
                 st.rerun()
 
-        st.markdown("### ✏️ Edit / 🗑️ Hapus Data")
-        idx = st.number_input("Index data", min_value=0, max_value=len(df_keu)-1 if len(df_keu)>0 else 0)
-        if st.button("🗑️ Hapus"):
-            df_keu = df_keu.drop(idx).reset_index(drop=True)
-            save_csv(df_keu, FILE_KEU)
-            log_activity(level, f"Hapus data keuangan index {idx}")
-            st.success("Data dihapus")
-            st.rerun()
-
 # =====================================================
-#  MENU BARANG (STRUKTUR SAMA)
+#  MENU BARANG
 # =====================================================
 elif menu == "📦 Barang Masuk":
 
     st.dataframe(df_bar, use_container_width=True)
-
-    st.download_button(
-        "📥 Download Barang (CSV)",
-        df_bar.to_csv(index=False),
-        "barang.csv",
-        "text/csv"
-    )
+    st.download_button("📥 Download Barang (CSV)", df_bar.to_csv(index=False), "barang.csv")
 
     if level != "Publik":
         with st.form("add_bar"):
             tgl = st.date_input("Tanggal")
             jenis = st.text_input("Jenis")
             ket = st.text_input("Keterangan")
-            jml = st.number_input("Jumlah", min_value=0)
+            jml = st.number_input("Jumlah", 0)
             sat = st.text_input("Satuan")
             if st.form_submit_button("Simpan"):
                 df_bar.loc[len(df_bar)] = [tgl, jenis, ket, jml, sat]
                 save_csv(df_bar, FILE_BAR)
                 log_activity(level, "Tambah data barang")
-                st.success("Data tersimpan")
                 st.rerun()
+
+# =====================================================
+#  MENU LAPORAN
+# =====================================================
+elif menu == "📄 Laporan":
+
+    st.subheader("📄 Laporan Resmi Musholla At-Taqwa")
+
+    html = f"""
+    <h2 style='text-align:center'>LAPORAN KEUANGAN & BARANG MASUK</h2>
+    <p><b>Tanggal Cetak:</b> {datetime.now().strftime('%d %B %Y')}</p>
+
+    <h3>Keuangan</h3>
+    {df_keu.to_html(index=False)}
+
+    <h3>Barang Masuk</h3>
+    {df_bar.to_html(index=False)}
+
+    <br><br>
+    <table width='100%'>
+    <tr>
+        <td align='center'>Ketua<br><br><b>Ferri Kusuma</b></td>
+        <td align='center'>Bendahara<br><br><b>Sunhadi Prayitno</b></td>
+    </tr>
+    </table>
+    """
+
+    st.markdown(html, unsafe_allow_html=True)
+    st.download_button(
+        "📥 Download Laporan PDF",
+        html.encode("utf-8"),
+        "Laporan_Musholla_At-Taqwa.pdf",
+        "application/pdf"
+    )
 
 # =====================================================
 #  MENU LOG
 # =====================================================
 elif menu == "🧾 Log":
-
     if level == "Publik":
         st.stop()
-
     df_log = load_csv(FILE_LOG)
     st.dataframe(df_log, use_container_width=True)
-
-    st.download_button(
-        "📥 Download Log (CSV)",
-        df_log.to_csv(index=False),
-        "log_aktivitas.csv",
-        "text/csv"
-    )
+    st.download_button("📥 Download Log (CSV)", df_log.to_csv(index=False), "log_aktivitas.csv")
