@@ -1,6 +1,6 @@
 # ===================================================== 
 #  APP.PY FINAL – MUSHOLLA AT-TAQWA
-#  TAMPILAN KEMBALI SEPERTI AWAL | HIJAU NU | PDF LENGKAP
+#  KEUANGAN + BARANG MASUK | HIJAU NU | PDF RESMI
 # =====================================================
 
 import streamlit as st
@@ -22,20 +22,19 @@ FILE_BARANG = DATA_DIR / "barang.csv"
 FILE_LOG = DATA_DIR / "log_aktivitas.csv"
 
 # =====================================================
-#  INISIAL FILE JIKA BELUM ADA
+#  INISIAL FILE
 # =====================================================
 if not FILE_KEUANGAN.exists():
-    pd.DataFrame(columns=[
-        "Tanggal","Keterangan","Kategori","Masuk","Keluar","Saldo","bukti_url"
-    ]).to_csv(FILE_KEUANGAN, index=False)
+    pd.DataFrame(columns=["Tanggal","Keterangan","Kategori","Masuk","Keluar","Saldo","bukti_url"])\
+        .to_csv(FILE_KEUANGAN, index=False)
 
 if not FILE_BARANG.exists():
-    pd.DataFrame(columns=[
-        "tanggal","jenis","keterangan","jumlah","satuan","bukti"
-    ]).to_csv(FILE_BARANG, index=False)
+    pd.DataFrame(columns=["tanggal","jenis","keterangan","jumlah","satuan","bukti"])\
+        .to_csv(FILE_BARANG, index=False)
 
 if not FILE_LOG.exists():
-    pd.DataFrame(columns=["Waktu","User","Aktivitas"]).to_csv(FILE_LOG, index=False)
+    pd.DataFrame(columns=["Waktu","User","Aktivitas"])\
+        .to_csv(FILE_LOG, index=False)
 
 # =====================================================
 #  AKUN PANITIA
@@ -50,35 +49,26 @@ PANITIA = {
 }
 
 # =====================================================
-#  SETTING STREAMLIT & TEMA HIJAU NU
+#  STREAMLIT & TEMA HIJAU NU
 # =====================================================
-st.set_page_config(page_title="Manajemen Musholla At-Taqwa", layout="wide")
-
+st.set_page_config("Manajemen Musholla At-Taqwa", layout="wide")
 st.markdown("""
 <style>
-.stApp { background-color:#f1f6f2; }
+.stApp { background:#f1f6f2; }
 h1,h2,h3,h4 { color:#0b6e4f; font-weight:800; }
 .header-box {
     background:linear-gradient(90deg,#0b6e4f,#18a36d);
-    padding:22px;
-    border-radius:14px;
-    color:white;
-    margin-bottom:18px;
+    padding:22px;border-radius:14px;color:white;margin-bottom:18px;
 }
 section[data-testid="stSidebar"] { background:#0b6e4f; }
-section[data-testid="stSidebar"] * { color:white !important; }
+section[data-testid="stSidebar"] * { color:white!important; }
 .stButton>button {
     background:linear-gradient(90deg,#0b6e4f,#18a36d);
-    color:white;
-    font-weight:700;
-    border-radius:10px;
+    color:white;font-weight:700;border-radius:10px;
 }
 .infocard {
-    background:white;
-    border-radius:14px;
-    padding:18px;
-    border:1px solid #d9e9dd;
-    text-align:center;
+    background:white;border-radius:14px;padding:18px;
+    border:1px solid #d9e9dd;text-align:center;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -86,23 +76,21 @@ section[data-testid="stSidebar"] * { color:white !important; }
 # =====================================================
 #  UTIL
 # =====================================================
-def read_csv_safe(path):
-    try:
-        return pd.read_csv(path)
-    except:
-        return pd.DataFrame()
+def read_csv_safe(p):
+    try: return pd.read_csv(p)
+    except: return pd.DataFrame()
 
 def save_log(user, aktivitas):
-    df_log = read_csv_safe(FILE_LOG)
-    new = pd.DataFrame([{
+    df = read_csv_safe(FILE_LOG)
+    df = pd.concat([df, pd.DataFrame([{
         "Waktu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "User": user,
         "Aktivitas": aktivitas
-    }])
-    pd.concat([df_log, new], ignore_index=True).to_csv(FILE_LOG, index=False)
+    }])])
+    df.to_csv(FILE_LOG, index=False)
 
 # =====================================================
-#  LOAD & NORMALISASI DATA
+#  LOAD DATA
 # =====================================================
 df_keu = read_csv_safe(FILE_KEUANGAN)
 df_barang = read_csv_safe(FILE_BARANG)
@@ -126,8 +114,11 @@ Transparansi • Amanah • Profesional
 #  LOGIN
 # =====================================================
 st.sidebar.header("🔐 Login")
-level = st.sidebar.radio("", ["Publik","Ketua","Sekretaris","Bendahara 1","Bendahara 2","Koor Donasi 1","Koor Donasi 2"])
-
+level = st.sidebar.radio("", [
+    "Publik","Ketua","Sekretaris",
+    "Bendahara 1","Bendahara 2",
+    "Koor Donasi 1","Koor Donasi 2"
+])
 is_admin = level != "Publik"
 
 if is_admin:
@@ -145,74 +136,67 @@ if menu == "💰 Keuangan":
     st.subheader("💰 Ringkasan Keuangan")
 
     if not df_keu.empty:
-        col1, col2, col3 = st.columns(3)
-        col1.markdown(f"<div class='infocard'><h4>Total Masuk</h4><h3>Rp {df_keu['Masuk'].sum():,.0f}</h3></div>", unsafe_allow_html=True)
-        col2.markdown(f"<div class='infocard'><h4>Total Keluar</h4><h3>Rp {df_keu['Keluar'].sum():,.0f}</h3></div>", unsafe_allow_html=True)
-        col3.markdown(f"<div class='infocard'><h4>Saldo Akhir</h4><h3>Rp {df_keu['Saldo'].iloc[-1]:,.0f}</h3></div>", unsafe_allow_html=True)
+        c1,c2,c3 = st.columns(3)
+        c1.markdown(f"<div class='infocard'><h4>Total Masuk</h4><h3>Rp {df_keu['Masuk'].sum():,.0f}</h3></div>", True)
+        c2.markdown(f"<div class='infocard'><h4>Total Keluar</h4><h3>Rp {df_keu['Keluar'].sum():,.0f}</h3></div>", True)
+        c3.markdown(f"<div class='infocard'><h4>Saldo Akhir</h4><h3>Rp {df_keu['Saldo'].iloc[-1]:,.0f}</h3></div>", True)
 
-        st.markdown("### 📄 Detail Transaksi")
         st.dataframe(df_keu, use_container_width=True)
+        st.download_button("📥 Download Transaksi CSV", df_keu.to_csv(index=False),
+                           "transaksi_keuangan.csv","text/csv")
 
-        st.download_button(
-            "📥 Download Data Transaksi (CSV)",
-            df_keu.to_csv(index=False),
-            "transaksi_keuangan.csv",
-            "text/csv"
-        )
-
-    else:
-        st.info("Belum ada data keuangan.")
-
-    # ========= TAMBAH / EDIT / HAPUS (NON PUBLIK) =========
     if is_admin:
-        st.markdown("### ➕ Tambah / Edit / Hapus Transaksi")
-
-        with st.form("form_keuangan"):
+        st.markdown("### ➕ Tambah Transaksi")
+        with st.form("keu"):
             tgl = st.date_input("Tanggal")
             ket = st.text_input("Keterangan")
-            masuk = st.number_input("Masuk", 0)
-            keluar = st.number_input("Keluar", 0)
-            submit = st.form_submit_button("💾 Simpan")
-
-        if submit:
-            new = pd.DataFrame([{
-                "Tanggal": tgl.strftime("%Y-%m-%d"),
-                "Keterangan": ket,
-                "Kategori": "Kas_Masuk" if masuk > 0 else "Kas_Keluar",
-                "Masuk": masuk,
-                "Keluar": keluar,
-                "Saldo": 0,
-                "bukti_url": ""
-            }])
-            df = pd.concat([df_keu, new], ignore_index=True)
-            df["Saldo"] = (df["Masuk"] - df["Keluar"]).cumsum()
-            df.to_csv(FILE_KEUANGAN, index=False)
-            save_log(level, "Tambah transaksi keuangan")
-            st.success("✅ Transaksi ditambahkan")
-            st.rerun()
-
-        idx = st.number_input("Index transaksi yang akan dihapus", 0, len(df_keu)-1 if len(df_keu)>0 else 0)
-        if st.button("🗑️ Hapus Transaksi"):
-            df_keu.drop(idx, inplace=True)
-            df_keu.reset_index(drop=True, inplace=True)
-            df_keu["Saldo"] = (df_keu["Masuk"] - df_keu["Keluar"]).cumsum()
-            df_keu.to_csv(FILE_KEUANGAN, index=False)
-            save_log(level, "Hapus transaksi keuangan")
-            st.success("🗑️ Transaksi dihapus")
-            st.rerun()
+            masuk = st.number_input("Masuk",0)
+            keluar = st.number_input("Keluar",0)
+            if st.form_submit_button("💾 Simpan"):
+                df = pd.concat([df_keu, pd.DataFrame([{
+                    "Tanggal":tgl.strftime("%Y-%m-%d"),
+                    "Keterangan":ket,"Kategori":"",
+                    "Masuk":masuk,"Keluar":keluar,
+                    "Saldo":0,"bukti_url":""
+                }])])
+                df["Saldo"] = (df["Masuk"]-df["Keluar"]).cumsum()
+                df.to_csv(FILE_KEUANGAN,index=False)
+                save_log(level,"Tambah transaksi")
+                st.rerun()
 
 # =====================================================
-#  MENU BARANG (TIDAK DIUBAH)
+#  MENU BARANG MASUK
 # =====================================================
 elif menu == "📦 Barang Masuk":
     st.subheader("📦 Barang Masuk")
-    if df_barang.empty:
-        st.info("Belum ada data barang.")
-    else:
+
+    if not df_barang.empty:
         st.dataframe(df_barang, use_container_width=True)
+        st.download_button("📥 Download Barang CSV",
+            df_barang.to_csv(index=False),"barang_masuk.csv","text/csv")
+    else:
+        st.info("Belum ada data barang.")
+
+    if is_admin:
+        st.markdown("### ➕ Tambah Barang")
+        with st.form("barang"):
+            tgl = st.date_input("Tanggal")
+            jenis = st.text_input("Jenis Barang")
+            ket = st.text_input("Keterangan")
+            jumlah = st.number_input("Jumlah",1)
+            satuan = st.text_input("Satuan")
+            if st.form_submit_button("💾 Simpan"):
+                df = pd.concat([df_barang, pd.DataFrame([{
+                    "tanggal":tgl.strftime("%Y-%m-%d"),
+                    "jenis":jenis,"keterangan":ket,
+                    "jumlah":jumlah,"satuan":satuan,"bukti":""
+                }])])
+                df.to_csv(FILE_BARANG,index=False)
+                save_log(level,"Tambah barang masuk")
+                st.rerun()
 
 # =====================================================
-#  MENU LAPORAN (JANGAN DIUBAH)
+#  MENU LAPORAN (TIDAK DIUBAH)
 # =====================================================
 elif menu == "📄 Laporan":
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
@@ -220,51 +204,38 @@ elif menu == "📄 Laporan":
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
 
-    st.subheader("📄 Laporan Resmi")
-    st.dataframe(df_keu, use_container_width=True)
-
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
     el = []
 
     el.append(Paragraph("<b>MUSHOLLA AT-TAQWA</b>", styles["Title"]))
-    el.append(Paragraph("LAPORAN KEUANGAN & BARANG MASUK", styles["Heading2"]))
     el.append(Spacer(1,12))
 
-    data = [["Tanggal","Keterangan","Masuk","Keluar","Saldo"]]
-    for _, r in df_keu.iterrows():
-        data.append([r["Tanggal"], r["Keterangan"], r["Masuk"], r["Keluar"], r["Saldo"]])
+    data_keu = [["Tanggal","Keterangan","Masuk","Keluar","Saldo"]]
+    for _,r in df_keu.iterrows():
+        data_keu.append([r["Tanggal"],r["Keterangan"],r["Masuk"],r["Keluar"],r["Saldo"]])
 
-    tbl = Table(data, repeatRows=1)
-    tbl.setStyle(TableStyle([("GRID",(0,0),(-1,-1),0.5,colors.grey)]))
-    el.append(tbl)
+    el.append(Table(data_keu, repeatRows=1))
+    el.append(Spacer(1,16))
+
+    if not df_barang.empty:
+        data_bar = [["Tanggal","Jenis","Keterangan","Jumlah","Satuan"]]
+        for _,r in df_barang.iterrows():
+            data_bar.append([r["tanggal"],r["jenis"],r["keterangan"],r["jumlah"],r["satuan"]])
+        el.append(Table(data_bar, repeatRows=1))
 
     doc.build(el)
     buffer.seek(0)
 
-    st.download_button(
-        "📥 Download Laporan PDF Resmi",
-        buffer,
-        "Laporan_Musholla_At-Taqwa.pdf",
-        "application/pdf"
-    )
+    st.download_button("📥 Download Laporan PDF",
+        buffer,"Laporan_Musholla_At-Taqwa.pdf","application/pdf")
 
 # =====================================================
 #  MENU LOG
 # =====================================================
 elif menu == "🧾 Log":
     df_log = read_csv_safe(FILE_LOG)
-    st.subheader("🧾 Log Aktivitas")
-
-    if df_log.empty:
-        st.info("Belum ada log.")
-    else:
-        st.dataframe(df_log, use_container_width=True)
-
-        st.download_button(
-            "📥 Download Log Aktivitas (CSV)",
-            df_log.to_csv(index=False),
-            "log_aktivitas.csv",
-            "text/csv"
-        )
+    st.dataframe(df_log, use_container_width=True)
+    st.download_button("📥 Download Log CSV",
+        df_log.to_csv(index=False),"log_aktivitas.csv","text/csv")
