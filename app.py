@@ -58,7 +58,7 @@ st.markdown("""
 h1,h2,h3,h4 { color:#0b6e4f; font-weight:800; }
 .header-box {
    background:linear-gradient(90deg,#064635,#0b6e4f);;
-    padding:22px;border-radius:14px;color:white;margin-bottom:18px;
+    padding:22px;border-radius:14px;color:white;margin-bottom:16px;
 }
 section[data-testid="stSidebar"] { background:#0b6e4f; }
 section[data-testid="stSidebar"] * { color:white!important; }
