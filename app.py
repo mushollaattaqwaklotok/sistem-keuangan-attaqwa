@@ -108,6 +108,7 @@ if not df_keu.empty:
 st.markdown("""
 <div class="header-box">
 <h2>📊 Laporan Keuangan Musholla At-Taqwa</h2>
+Ketua: FERRI Sekretaris: FATIK Bendahara: HADI
 Transparansi • Amanah • Profesional
 </div>
 """, unsafe_allow_html=True)
