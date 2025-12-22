@@ -1,6 +1,6 @@
-# ===================================================== 
+# =====================================================
 #  APP.PY FINAL – MUSHOLLA AT-TAQWA
-#  KEUANGAN + BARANG MASUK | HIJAU NU | PDF RESMI
+#  KEUANGAN + BARANG MASUK | HIJAU NU | PDF SEMI FORMAL
 # =====================================================
 
 import streamlit as st
@@ -55,10 +55,10 @@ st.set_page_config("Manajemen Musholla At-Taqwa", layout="wide")
 st.markdown("""
 <style>
 .stApp { background:#f1f6f2; }
-h1,h2,h3,h4 { color:#D4AF37; font-weight:800; }
+h1,h2,h3,h4 { color:#064635; font-weight:800; }
 .header-box {
-   background:linear-gradient(90deg,#064635,#0b6e4f);;
-    padding:22px;border-radius:14px;color:white;margin-bottom:16px;
+   background:linear-gradient(90deg,#064635,#0b6e4f);
+   padding:22px;border-radius:14px;color:white;margin-bottom:16px;
 }
 section[data-testid="stSidebar"] { background:#0b6e4f; }
 section[data-testid="stSidebar"] * { color:white!important; }
@@ -77,8 +77,10 @@ section[data-testid="stSidebar"] * { color:white!important; }
 #  UTIL
 # =====================================================
 def read_csv_safe(p):
-    try: return pd.read_csv(p)
-    except: return pd.DataFrame()
+    try:
+        return pd.read_csv(p)
+    except:
+        return pd.DataFrame()
 
 def save_log(user, aktivitas):
     df = read_csv_safe(FILE_LOG)
@@ -196,7 +198,7 @@ elif menu == "📦 Barang Masuk":
                 st.rerun()
 
 # =====================================================
-#  MENU LAPORAN (TIDAK DIUBAH)
+#  MENU LAPORAN – PDF DIPERINDAH (SAJA)
 # =====================================================
 elif menu == "📄 Laporan":
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
@@ -205,31 +207,76 @@ elif menu == "📄 Laporan":
     from reportlab.lib import colors
 
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        rightMargin=36,leftMargin=36,topMargin=36,bottomMargin=36
+    )
+
     styles = getSampleStyleSheet()
+    styles["Title"].textColor = colors.HexColor("#064635")
+    styles["Title"].alignment = 1
+    styles["Normal"].spaceAfter = 6
+
     el = []
 
     el.append(Paragraph("<b>MUSHOLLA AT-TAQWA</b>", styles["Title"]))
+    el.append(Paragraph("Laporan Keuangan & Barang Masuk", styles["Normal"]))
+    el.append(Paragraph(
+        f"Per tanggal: {datetime.now().strftime('%d %B %Y')}",
+        styles["Normal"]
+    ))
     el.append(Spacer(1,12))
 
+    # ---------- TABEL KEUANGAN ----------
     data_keu = [["Tanggal","Keterangan","Masuk","Keluar","Saldo"]]
     for _,r in df_keu.iterrows():
-        data_keu.append([r["Tanggal"],r["Keterangan"],r["Masuk"],r["Keluar"],r["Saldo"]])
+        data_keu.append([
+            r["Tanggal"], r["Keterangan"],
+            f"{int(r['Masuk']):,}",
+            f"{int(r['Keluar']):,}",
+            f"{int(r['Saldo']):,}"
+        ])
 
-    el.append(Table(data_keu, repeatRows=1))
+    tbl_keu = Table(data_keu, repeatRows=1, colWidths=[70,150,70,70,70])
+    tbl_keu.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#064635")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("GRID",(0,0),(-1,-1),0.5,colors.grey),
+        ("ALIGN",(2,1),(-1,-1),"RIGHT"),
+        ("FONT",(0,0),(-1,0),"Helvetica-Bold")
+    ]))
+
+    el.append(tbl_keu)
     el.append(Spacer(1,16))
 
+    # ---------- TABEL BARANG ----------
     if not df_barang.empty:
         data_bar = [["Tanggal","Jenis","Keterangan","Jumlah","Satuan"]]
         for _,r in df_barang.iterrows():
-            data_bar.append([r["tanggal"],r["jenis"],r["keterangan"],r["jumlah"],r["satuan"]])
-        el.append(Table(data_bar, repeatRows=1))
+            data_bar.append([
+                r["tanggal"], r["jenis"],
+                r["keterangan"], r["jumlah"], r["satuan"]
+            ])
+
+        tbl_bar = Table(data_bar, repeatRows=1, colWidths=[70,100,150,50,50])
+        tbl_bar.setStyle(TableStyle([
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#064635")),
+            ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+            ("GRID",(0,0),(-1,-1),0.5,colors.grey),
+            ("FONT",(0,0),(-1,0),"Helvetica-Bold")
+        ]))
+
+        el.append(tbl_bar)
 
     doc.build(el)
     buffer.seek(0)
 
-    st.download_button("📥 Download Laporan PDF",
-        buffer,"Laporan_Musholla_At-Taqwa.pdf","application/pdf")
+    st.download_button(
+        "📥 Download Laporan PDF",
+        buffer,
+        "Laporan_Musholla_At-Taqwa.pdf",
+        "application/pdf"
+    )
 
 # =====================================================
 #  MENU LOG
