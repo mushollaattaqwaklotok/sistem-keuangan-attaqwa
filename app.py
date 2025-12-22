@@ -55,7 +55,7 @@ st.set_page_config("Manajemen Musholla At-Taqwa", layout="wide")
 st.markdown("""
 <style>
 .stApp { background:#f1f6f2; }
-h1,h2,h3,h4 { color:#C9A227; font-weight:800; }
+h1,h2,h3,h4 { color:#B8860B; font-weight:800; }
 .header-box {
    background:linear-gradient(90deg,#064635,#0b6e4f);;
     padding:22px;border-radius:14px;color:white;margin-bottom:16px;
